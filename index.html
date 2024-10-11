@@ -114,14 +114,14 @@
     <h3>Encrypt Text:</h3>
     <textarea id="textToEncrypt" rows="4" placeholder="Enter text to encrypt"></textarea>
     <input type="password" id="password" placeholder="Enter password">
-    <button onclick="encryptText()">Encrypt</button>
+    <button id="encryptBtn">Encrypt</button>
 
     <div class="result" id="encryptedResult"></div>
 
     <h3>Decrypt Text:</h3>
     <input type="password" id="decryptPassword" placeholder="Enter password to decrypt">
     <input type="text" id="decryptKey" placeholder="Enter generated key">
-    <button onclick="decryptText()">Decrypt</button>
+    <button id="decryptBtn">Decrypt</button>
 
     <div class="result" id="decryptedResult"></div>
 </div>
@@ -131,47 +131,45 @@
     const canvas = document.getElementById("matrixCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Making the canvas full screen
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     const letters = "0101010101010101010101";
     const fontSize = 16;
-    const columns = canvas.width / fontSize; // Number of columns for the rain
-    const drops = []; // Array of drops (one per column)
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = [];
 
-    // Initialize drops
     for (let i = 0; i < columns; i++) {
-        drops[i] = Math.random() * canvas.height / fontSize;
+        drops[i] = 1;
     }
 
     function drawMatrix() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Fading effect
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill canvas with black
-        
-        ctx.fillStyle = "#0F0"; // Green color for 0 and 1's
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#0F0"; // Green color
         ctx.font = fontSize + "px monospace";
 
         for (let i = 0; i < drops.length; i++) {
-            // Random character from the letters
             const text = letters[Math.floor(Math.random() * letters.length)];
-
-            // Drawing the text at x=i*fontSize, y=drops[i]*fontSize
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
-            // Reset drop to top of screen after falling out of view
             if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
                 drops[i] = 0;
             }
 
-            // Incrementing Y coordinate for each drop
             drops[i]++;
         }
     }
 
-    setInterval(drawMatrix, 33); // Drawing the effect at ~30 frames per second
+    setInterval(drawMatrix, 33); // ~30 FPS
 
-    // Function to generate a random key with letters, numbers, and dashes
+    // Function to generate a random key
     function generateRandomKey() {
         const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
         let key = '';
@@ -184,80 +182,36 @@
         return key;
     }
 
-    // Function to save data in localStorage
-    function saveToLocalStorage(key, value) {
-        localStorage.setItem(key, value);
-    }
-
-    // Function to retrieve data from localStorage
-    function getFromLocalStorage(key) {
-        return localStorage.getItem(key);
-    }
-
-    // Function to validate password
-    function validatePassword(password) {
-        const lengthCriteria = password.length >= 8;
-        const specialCharacterCriteria = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/.test(password);
-        const numberCriteria = (password.match(/\d/g) || []).length >= 2;
-        const uppercaseCriteria = /[A-Z]/.test(password);
-        const lowercaseCriteria = /[a-z]/.test(password);
-        
-        return lengthCriteria && specialCharacterCriteria && numberCriteria && uppercaseCriteria && lowercaseCriteria;
-    }
-
-    // Function to encrypt the text and save to localStorage
+    // Basic Encrypt/Decrypt without Firebase for now
     function encryptText() {
         const text = document.getElementById("textToEncrypt").value;
         const password = document.getElementById("password").value;
 
         if (text && password) {
-            if (validatePassword(password)) {
-                const generatedKey = generateRandomKey();
-                const encryptedText = `${generatedKey}:${text}`;
-
-                // Save the encrypted text and password to localStorage
-                saveToLocalStorage('encryptedText', encryptedText);
-                saveToLocalStorage('password', password);
-                saveToLocalStorage('key', generatedKey);
-
-                document.getElementById("encryptedResult").innerHTML = `
-                    <p><strong>Generated Key:</strong></p>
-                    <div class="key">${generatedKey}</div>
-                    <p class="success"><strong>Encrypted Text:</strong> Text encrypted and saved. Use the key to decrypt.</p>
-                `;
-            } else {
-                alert("Password must be at least 8 characters long, contain at least 1 special character, at least 2 numbers, and at least one uppercase and one lowercase letter.");
-            }
+            const generatedKey = generateRandomKey();
+            const encryptedText = btoa(text); // Simple Base64 encoding
+            document.getElementById("encryptedResult").innerHTML = `
+                <p><strong>Generated Key:</strong></p>
+                <div class="key">${generatedKey}</div>
+                <p class="success"><strong>Encrypted Text:</strong> ${encryptedText}</p>
+            `;
         } else {
             alert("Please enter both text and password to encrypt.");
         }
     }
 
-    // Function to decrypt the text using localStorage data
     function decryptText() {
-        const inputPassword = document.getElementById("decryptPassword").value;
-        const inputKey = document.getElementById("decryptKey").value;
-
-        const storedPassword = getFromLocalStorage('password');
-        const storedKey = getFromLocalStorage('key');
-        const storedEncryptedText = getFromLocalStorage('encryptedText');
-
-        if (inputPassword && inputKey) {
-            if (inputPassword === storedPassword && inputKey === storedKey) {
-                const decryptedMessage = storedEncryptedText.split(":")[1];
-                document.getElementById("decryptedResult").innerHTML = `
-                    <p><strong>Decrypted Text:</strong></p>
-                    <div class="decrypted-text">${decryptedMessage}</div>
-                `;
-            } else {
-                document.getElementById("decryptedResult").innerHTML = `
-                    <p class="error"><strong>Error:</strong> Invalid password or key.</p>
-                `;
-            }
-        } else {
-            alert("Please enter both password and key to decrypt.");
-        }
+        const encryptedText = document.getElementById("decryptKey").value; // Simulating getting encrypted text
+        const decryptedMessage = atob(encryptedText); // Simple Base64 decoding
+        document.getElementById("decryptedResult").innerHTML = `
+            <p><strong>Decrypted Text:</strong></p>
+            <div class="decrypted-text">${decryptedMessage}</div>
+        `;
     }
+
+    // Event listeners for the buttons
+    document.getElementById("encryptBtn").addEventListener("click", encryptText);
+    document.getElementById("decryptBtn").addEventListener("click", decryptText);
 </script>
 
 </body>
