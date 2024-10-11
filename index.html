@@ -126,7 +126,28 @@
     <div class="result" id="decryptedResult"></div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-analytics.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database.js"></script>
+
 <script>
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDqxbu7oQ7BaqjkLs-tvjd_geajlRG4ow4",
+        authDomain: "cryptify-34426.firebaseapp.com",
+        databaseURL: "https://cryptify-34426-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "cryptify-34426",
+        storageBucket: "cryptify-34426.appspot.com",
+        messagingSenderId: "797532422583",
+        appId: "1:797532422583:web:9c643a37185750c536e832",
+        measurementId: "G-HRGPVMJ10J"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
     // Matrix Effect (Falling 0s and 1s)
     const canvas = document.getElementById("matrixCanvas");
     const ctx = canvas.getContext("2d");
@@ -137,41 +158,34 @@
 
     const letters = "0101010101010101010101";
     const fontSize = 16;
-    const columns = canvas.width / fontSize; // Number of columns for the rain
-    const drops = []; // Array of drops (one per column)
+    const columns = canvas.width / fontSize;
+    const drops = [];
 
-    // Initialize drops
     for (let i = 0; i < columns; i++) {
         drops[i] = Math.random() * canvas.height / fontSize;
     }
 
     function drawMatrix() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Fading effect
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill canvas with black
-        
-        ctx.fillStyle = "#0F0"; // Green color for 0 and 1's
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#0F0";
         ctx.font = fontSize + "px monospace";
 
         for (let i = 0; i < drops.length; i++) {
-            // Random character from the letters
             const text = letters[Math.floor(Math.random() * letters.length)];
-
-            // Drawing the text at x=i*fontSize, y=drops[i]*fontSize
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
-            // Reset drop to top of screen after falling out of view
             if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
                 drops[i] = 0;
             }
-
-            // Incrementing Y coordinate for each drop
             drops[i]++;
         }
     }
 
-    setInterval(drawMatrix, 33); // Drawing the effect at ~30 frames per second
+    setInterval(drawMatrix, 33);
 
-    // Function to generate a random key with letters, numbers, and dashes
+    // Function to generate a random key
     function generateRandomKey() {
         const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
         let key = '';
@@ -184,28 +198,35 @@
         return key;
     }
 
-    // Function to save data in localStorage
-    function saveToLocalStorage(key, value) {
-        localStorage.setItem(key, value);
+    // Store encrypted text in Firebase
+    function storeEncryptedText(key, encryptedText) {
+        database.ref('messages/' + key).set({
+            encryptedText: encryptedText
+        });
     }
 
-    // Function to retrieve data from localStorage
-    function getFromLocalStorage(key) {
-        return localStorage.getItem(key);
+    // Retrieve encrypted text from Firebase
+    function getEncryptedText(key, callback) {
+        database.ref('messages/' + key).once('value').then(function(snapshot) {
+            if (snapshot.exists()) {
+                callback(snapshot.val().encryptedText);
+            } else {
+                callback(null);
+            }
+        });
     }
 
     // Function to validate password
     function validatePassword(password) {
         const lengthCriteria = password.length >= 8;
-        const specialCharacterCriteria = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/.test(password);
+        const specialCharacterCriteria = /[!"#$%&'()*+,-./:;<=>?@[\]^_{|}~]/.test(password);
         const numberCriteria = (password.match(/\d/g) || []).length >= 2;
         const uppercaseCriteria = /[A-Z]/.test(password);
         const lowercaseCriteria = /[a-z]/.test(password);
-        
         return lengthCriteria && specialCharacterCriteria && numberCriteria && uppercaseCriteria && lowercaseCriteria;
     }
 
-    // Function to encrypt the text and save to localStorage
+    // Encrypt text and store in Firebase
     function encryptText() {
         const text = document.getElementById("textToEncrypt").value;
         const password = document.getElementById("password").value;
@@ -213,12 +234,10 @@
         if (text && password) {
             if (validatePassword(password)) {
                 const generatedKey = generateRandomKey();
-                const encryptedText = `${generatedKey}:${text}`;
+                const encryptedText = generatedKey + ":" + text;
 
-                // Save the encrypted text and password to localStorage
-                saveToLocalStorage('encryptedText', encryptedText);
-                saveToLocalStorage('password', password);
-                saveToLocalStorage('key', generatedKey);
+                // Save to Firebase
+                storeEncryptedText(generatedKey, encryptedText);
 
                 document.getElementById("encryptedResult").innerHTML = `
                     <p><strong>Generated Key:</strong></p>
@@ -233,30 +252,29 @@
         }
     }
 
-    // Function to decrypt the text using localStorage data
+    // Decrypt text using Firebase
     function decryptText() {
         const inputPassword = document.getElementById("decryptPassword").value;
         const inputKey = document.getElementById("decryptKey").value;
 
-        const storedPassword = getFromLocalStorage('password');
-        const storedKey = getFromLocalStorage('key');
-        const storedEncryptedText = getFromLocalStorage('encryptedText');
-
-        if (inputPassword && inputKey) {
-            if (inputPassword === storedPassword && inputKey === storedKey) {
-                const decryptedMessage = storedEncryptedText.split(":")[1];
-                document.getElementById("decryptedResult").innerHTML = `
-                    <p><strong>Decrypted Text:</strong></p>
-                    <div class="decrypted-text">${decryptedMessage}</div>
-                `;
+        getEncryptedText(inputKey, function(encryptedText) {
+            if (encryptedText) {
+                const storedPassword = encryptedText.split(":")[0];
+                if (inputPassword === storedPassword) {
+                    const decryptedMessage = encryptedText.split(":")[1];
+                    document.getElementById("decryptedResult").innerHTML = `
+                        <p><strong>Decrypted Text:</strong></p>
+                        <div class="decrypted-text">${decryptedMessage}</div>
+                    `;
+                } else {
+                    document.getElementById("decryptedResult").innerHTML = `
+                        <p class="error"><strong>Error:</strong> Invalid password or key.</p>
+                    `;
+                }
             } else {
-                document.getElementById("decryptedResult").innerHTML = `
-                    <p class="error"><strong>Error:</strong> Invalid password or key.</p>
-                `;
+                alert("Invalid key. No matching entry found.");
             }
-        } else {
-            alert("Please enter both password and key to decrypt.");
-        }
+        });
     }
 </script>
 
