@@ -114,14 +114,14 @@
     <h3>Encrypt Text:</h3>
     <textarea id="textToEncrypt" rows="4" placeholder="Enter text to encrypt"></textarea>
     <input type="password" id="password" placeholder="Enter password">
-    <button id="encryptBtn">Encrypt</button>
+    <button onclick="encryptText()">Encrypt</button>
 
     <div class="result" id="encryptedResult"></div>
 
     <h3>Decrypt Text:</h3>
     <input type="password" id="decryptPassword" placeholder="Enter password to decrypt">
     <input type="text" id="decryptKey" placeholder="Enter generated key">
-    <button id="decryptBtn">Decrypt</button>
+    <button onclick="decryptText()">Decrypt</button>
 
     <div class="result" id="decryptedResult"></div>
 </div>
@@ -227,14 +227,14 @@
     }
 
     // Encrypt text and store in Firebase
-    document.getElementById("encryptBtn").addEventListener("click", function() {
+    function encryptText() {
         const text = document.getElementById("textToEncrypt").value;
         const password = document.getElementById("password").value;
 
         if (text && password) {
             if (validatePassword(password)) {
                 const generatedKey = generateRandomKey();
-                const encryptedText = password + ":" + text;
+                const encryptedText = generatedKey + ":" + text;
 
                 // Save to Firebase
                 storeEncryptedText(generatedKey, encryptedText);
@@ -245,41 +245,37 @@
                     <p class="success"><strong>Encrypted Text:</strong> Text encrypted and saved. Use the key to decrypt.</p>
                 `;
             } else {
-                alert("Password must meet the required criteria.");
+                alert("Password must be at least 8 characters long, contain at least 1 special character, at least 2 numbers, and at least one uppercase and one lowercase letter.");
             }
         } else {
             alert("Please enter both text and password to encrypt.");
         }
-    });
+    }
 
-    // Decrypt text from Firebase
-    document.getElementById("decryptBtn").addEventListener("click", function() {
+    // Decrypt text using Firebase
+    function decryptText() {
         const inputPassword = document.getElementById("decryptPassword").value;
         const inputKey = document.getElementById("decryptKey").value;
 
-        if (inputPassword && inputKey) {
-            getEncryptedText(inputKey, function(encryptedText) {
-                if (encryptedText) {
-                    const storedPassword = encryptedText.split(":")[0];
-                    if (inputPassword === storedPassword) {
-                        const decryptedMessage = encryptedText.split(":")[1];
-                        document.getElementById("decryptedResult").innerHTML = `
-                            <p><strong>Decrypted Text:</strong></p>
-                            <div class="decrypted-text">${decryptedMessage}</div>
-                        `;
-                    } else {
-                        document.getElementById("decryptedResult").innerHTML = `
-                            <p class="error"><strong>Error:</strong> Invalid password or key.</p>
-                        `;
-                    }
+        getEncryptedText(inputKey, function(encryptedText) {
+            if (encryptedText) {
+                const storedPassword = encryptedText.split(":")[0];
+                if (inputPassword === storedPassword) {
+                    const decryptedMessage = encryptedText.split(":")[1];
+                    document.getElementById("decryptedResult").innerHTML = `
+                        <p><strong>Decrypted Text:</strong></p>
+                        <div class="decrypted-text">${decryptedMessage}</div>
+                    `;
                 } else {
-                    alert("Invalid key. No matching entry found.");
+                    document.getElementById("decryptedResult").innerHTML = `
+                        <p class="error"><strong>Error:</strong> Invalid password or key.</p>
+                    `;
                 }
-            });
-        } else {
-            alert("Please enter both password and key to decrypt.");
-        }
-    });
+            } else {
+                alert("Invalid key. No matching entry found.");
+            }
+        });
+    }
 </script>
 
 </body>
