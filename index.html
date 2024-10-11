@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cryptify - Text Encryption Tool</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
     <style>
         /* Discord dark theme colors and overall design */
         body {
@@ -116,170 +114,162 @@
     <h3>Encrypt Text:</h3>
     <textarea id="textToEncrypt" rows="4" placeholder="Enter text to encrypt"></textarea>
     <input type="password" id="password" placeholder="Enter password">
-    <button id="encryptBtn">Encrypt</button>
+    <button onclick="encryptText()">Encrypt</button>
 
     <div class="result" id="encryptedResult"></div>
 
     <h3>Decrypt Text:</h3>
     <input type="password" id="decryptPassword" placeholder="Enter password to decrypt">
     <input type="text" id="decryptKey" placeholder="Enter generated key">
-    <button id="decryptBtn">Decrypt</button>
+    <button onclick="decryptText()">Decrypt</button>
 
     <div class="result" id="decryptedResult"></div>
 </div>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-analytics.js"></script>
+
 <script>
-    // Firebase configuration
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyDqxbu7oQ7BaqjkLs-tvjd_geajlRG4ow4",
+    authDomain: "cryptify-34426.firebaseapp.com",
+    databaseURL: "https://cryptify-34426-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "cryptify-34426",
+    storageBucket: "cryptify-34426.appspot.com",
+    messagingSenderId: "797532422583",
+    appId: "1:797532422583:web:9c643a37185750c536e832",
+    measurementId: "G-HRGPVMJ10J"
+};
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = firebase.database(app);
 
-    // Matrix Effect (Falling 0s and 1s)
-    const canvas = document.getElementById("matrixCanvas");
-    const ctx = canvas.getContext("2d");
+// Matrix Effect (Falling 0s and 1s)
+const canvas = document.getElementById("matrixCanvas");
+const ctx = canvas.getContext("2d");
 
-    // Making the canvas full screen
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+// Making the canvas full screen
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-    const letters = "0101010101010101010101";
-    const fontSize = 16;
-    const columns = canvas.width / fontSize; // Number of columns for the rain
-    const drops = []; // Array of drops (one per column)
+const letters = "0101010101010101010101";
+const fontSize = 16;
+const columns = canvas.width / fontSize; // Number of columns for the rain
+const drops = []; // Array of drops (one per column)
 
-    // Initialize drops
-    for (let i = 0; i < columns; i++) {
-        drops[i] = Math.random() * canvas.height / fontSize;
+// Initialize drops
+for (let i = 0; i < columns; i++) {
+    drops[i] = Math.random() * canvas.height / fontSize;
+}
+
+function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Fading effect
+    ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill canvas with black
+    
+    ctx.fillStyle = "#0F0"; // Green color for 0 and 1's
+    ctx.font = fontSize + "px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+        // Random character from the letters
+        const text = letters[Math.floor(Math.random() * letters.length)];
+
+        // Drawing the text at x=i*fontSize, y=drops[i]*fontSize
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        // Reset drop to top of screen after falling out of view
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+        }
+
+        // Incrementing Y coordinate for each drop
+        drops[i]++;
     }
+}
 
-    function drawMatrix() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Fading effect
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill canvas with black
-        
-        ctx.fillStyle = "#0F0"; // Green color for 0 and 1's
-        ctx.font = fontSize + "px monospace";
+setInterval(drawMatrix, 33); // Drawing the effect at ~30 frames per second
 
-        for (let i = 0; i < drops.length; i++) {
-            // Random character from the letters
-            const text = letters[Math.floor(Math.random() * letters.length)];
-
-            // Drawing the text at x=i*fontSize, y=drops[i]*fontSize
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            // Reset drop to top of screen after falling out of view
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-
-            // Incrementing Y coordinate for each drop
-            drops[i]++;
+// Function to generate a random key with letters, numbers, and dashes
+function generateRandomKey() {
+    const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let key = '';
+    for (let i = 0; i < 12; i++) {
+        key += characters.charAt(Math.floor(Math.random() * characters.length));
+        if ((i + 1) % 4 === 0 && i !== 11) {
+            key += '-';
         }
     }
+    return key;
+}
 
-    setInterval(drawMatrix, 33); // Drawing the effect at ~30 frames per second
+// Function to validate password
+function validatePassword(password) {
+    const lengthCriteria = password.length >= 8;
+    const specialCharacterCriteria = /[!"#$%&'()*+,-./:;<=>?@[\]^_{|}~]/.test(password);
+    const numberCriteria = (password.match(/\d/g) || []).length >= 2;
+    const uppercaseCriteria = /[A-Z]/.test(password);
+    const lowercaseCriteria = /[a-z]/.test(password);
+    
+    return lengthCriteria && specialCharacterCriteria && numberCriteria && uppercaseCriteria && lowercaseCriteria;
+}
 
-    // Function to generate a random key with letters, numbers, and dashes
-    function generateRandomKey() {
-        const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        let key = '';
-        for (let i = 0; i < 12; i++) {
-            key += characters.charAt(Math.floor(Math.random() * characters.length));
-            if ((i + 1) % 4 === 0 && i !== 11) {
-                key += '-';
-            }
-        }
-        return key;
-    }
+// Function to encrypt the text and save to Firebase
+function encryptText() {
+    const text = document.getElementById("textToEncrypt").value;
+    const password = document.getElementById("password").value;
 
-    // Function to validate password
-    function validatePassword(password) {
-        const lengthCriteria = password.length >= 8;
-        const specialCharacterCriteria = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/.test(password);
-        const numberCriteria = (password.match(/\d/g) || []).length >= 2;
-        const uppercaseCriteria = /[A-Z]/.test(password);
-        const lowercaseCriteria = /[a-z]/.test(password);
-        
-        return lengthCriteria && specialCharacterCriteria && numberCriteria && uppercaseCriteria && lowercaseCriteria;
-    }
+    if (text && password) {
+        if (validatePassword(password)) {
+            const generatedKey = generateRandomKey();
+            const encryptedText = `${generatedKey}:${text}`;
 
-    // Function to encrypt the text and save to Firebase
-    function encryptText() {
-        const text = document.getElementById("textToEncrypt").value;
-        const password = document.getElementById("password").value;
-
-        if (text && password) {
-            if (validatePassword(password)) {
-                const generatedKey = generateRandomKey();
-                const encryptedText = `${generatedKey}:${text}`;
-
-                // Save the encrypted text and password to Firebase
-                const newEntryRef = database.ref('encryptedTexts').push();
-                newEntryRef.set({
-                    key: generatedKey,
-                    text: encryptedText,
-                    password: password
-                });
-
-                document.getElementById("encryptedResult").innerHTML = `
-                    <p><strong>Generated Key:</strong></p>
-                    <div class="key">${generatedKey}</div>
-                    <p class="success"><strong>Encrypted Text:</strong> Text encrypted and saved. Use the key to decrypt.</p>
-                `;
-            } else {
-                alert("Password must be at least 8 characters long, contain at least 1 special character, at least 2 numbers, and at least one uppercase and one lowercase letter.");
-            }
-        } else {
-            alert("Please enter both text and password to encrypt.");
-        }
-    }
-
-    // Function to decrypt the text using Firebase data
-    function decryptText() {
-        const inputPassword = document.getElementById("decryptPassword").value;
-        const inputKey = document.getElementById("decryptKey").value;
-
-        if (inputPassword && inputKey) {
-            // Retrieve data from Firebase
-            const encryptedTextsRef = database.ref('encryptedTexts');
-            encryptedTextsRef.once('value').then((snapshot) => {
-                let found = false;
-
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    if (inputPassword === data.password && inputKey === data.key) {
-                        const decryptedMessage = data.text.split(":")[1];
-                        document.getElementById("decryptedResult").innerHTML = `
-                            <p><strong>Decrypted Text:</strong></p>
-                            <div class="decrypted-text">${decryptedMessage}</div>
-                        `;
-                        found = true;
-                    }
-                });
-
-                if (!found) {
-                    document.getElementById("decryptedResult").innerHTML = `
-                        <p class="error"><strong>Error:</strong> Invalid password or key.</p>
-                    `;
-                }
+            // Save the encrypted text, password, and key to Firebase
+            database.ref('users/').push({
+                encryptedText: encryptedText,
+                password: password,
+                key: generatedKey
             });
-        } else {
-            alert("Please enter both password and key to decrypt.");
-        }
-    }
 
-    // Attach event listeners
-    document.getElementById("encryptBtn").addEventListener("click", encryptText);
-    document.getElementById("decryptBtn").addEventListener("click", decryptText);
+            document.getElementById("encryptedResult").innerHTML = 
+                `<p><strong>Generated Key:</strong></p>
+                <div class="key">${generatedKey}</div>
+                <p class="success"><strong>Encrypted Text:</strong> Text encrypted and saved. Use the key to decrypt.</p>`;
+        } else {
+            alert("Password must be at least 8 characters long, contain at least 1 special character, at least 2 numbers, and at least one uppercase and one lowercase letter.");
+        }
+    } else {
+        alert("Please enter both text and password to encrypt.");
+    }
+}
+
+// Function to decrypt the text using Firebase data
+function decryptText() {
+    const inputPassword = document.getElementById("decryptPassword").value;
+    const inputKey = document.getElementById("decryptKey").value;
+
+    // Get all data from Firebase and check for matching password and key
+    database.ref('users/').once('value', (snapshot) => {
+        let found = false;
+        snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            if (inputPassword === data.password && inputKey === data.key) {
+                found = true;
+                const decryptedMessage = data.encryptedText.split(":")[1];
+                document.getElementById("decryptedResult").innerHTML = 
+                    `<p><strong>Decrypted Text:</strong></p>
+                    <div class="decrypted-text">${decryptedMessage}</div>`;
+            }
+        });
+
+        if (!found) {
+            document.getElementById("decryptedResult").innerHTML = 
+                `<p class="error"><strong>Error:</strong> Invalid password or key.</p>`;
+        }
+    });
+}
 </script>
 
 </body>
